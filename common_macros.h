@@ -5,9 +5,6 @@
  * File Name: Common_Macros.h
  *
  * Description: Commonly used Macros
- *
- * Author: Bassant Amr
- *
  *******************************************************************************/
 
 #ifndef COMMON_MACROS
