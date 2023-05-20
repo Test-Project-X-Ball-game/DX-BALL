@@ -17,7 +17,7 @@
 #include "button.h"
 #include "led.h"
 #include "uart.h"
-
+#include "std_types.h"
 // 2. Declarations Section
 //   function prototype
 void DisableInterrupts(void); // Disable interrupts
@@ -29,7 +29,7 @@ void DX_Ball();  //update x-y corrdinate and display at nokia
 //   Global Variables
 unsigned long TimerCount;
 unsigned long Semaphore;
-
+uint8 SW1,SW2;
 unsigned char flag=0;
 unsigned long eypos = 9;
 int k = 1; 
@@ -94,6 +94,8 @@ int main(void){
   Nokia5110_ClearBuffer();
 	Nokia5110_DisplayBuffer();      // draw buffer
 	UART_Init();
+ GPIO_Init(PORTF_ID, PIN0_ID, PIN_INPUT, GPIO, PULLUP, ENABLE);
+  GPIO_Init(PORTF_ID, PIN4_ID, PIN_INPUT, GPIO, PULLUP, ENABLE);
   Nokia5110_Clear();
   Nokia5110_SetCursor(1, 1);
   Nokia5110_OutString("plz press");
@@ -102,6 +104,17 @@ int main(void){
   Nokia5110_SetCursor(1, 3);
   Nokia5110_OutString("begin!");
   Nokia5110_SetCursor(2, 4);
+LED_Init(PORTB_ID,PIN0_ID); //led 1 init
+LED_Init(PORTB_ID,PIN1_ID); //led 2 init
+if(UART_InChar()){  //recieve from keyboard
+	UART_OutString("Welcome ");  //show in putty
+	BUTTON_Init(PORTB_ID,PIN3_ID,INT);  //initalize        
+	BUTTON_Init(PORTB_ID,PIN4_ID,INT);	
+	Timer2_Init(8000000);
+	EnableInterrupts();  // The grader uses interrupts
+}
+again:
+        x = 4, bunkerXPOS = 34, ballXPOS = 41, ballYPOS = 47 - 5, ballxf = 0, ballyf = -1, u_d = 1, l_r = 3, cnt = 0,nexist = nrow * nwall, success = 0;
 	/*initalize x and y coordinates for small balls*/
 	for(i = 0; i < nwall; ++i){
 		xpositions[i] = x;
@@ -119,15 +132,7 @@ int main(void){
 		}
 	}
 	
-	LED_Init(PORTB_ID,PIN0_ID); //led 1 init
-	LED_Init(PORTB_ID,PIN1_ID); //led 2 init
-	if(UART_InChar()){  //recieve from keyboard
-			UART_OutString("Welcome ");  //show in putty
-			BUTTON_Init(PORTB_ID,PIN3_ID,INT);  //initalize        
-			BUTTON_Init(PORTB_ID,PIN4_ID,INT);
-			Timer2_Init(8000000);
-			EnableInterrupts();  // The grader uses interrupts
-	}
+
   while(cnt<3){
 		
   }
@@ -137,6 +142,7 @@ int main(void){
 	Nokia5110_ClearBuffer();
 	Nokia5110_DisplayBuffer();      // draw buffer
 	if(success){
+		TIMER2_IMR_R = 0x00000000;
 		Nokia5110_Clear();
 		Nokia5110_SetCursor(1, 1);
 		Nokia5110_OutString("CONGRATULAT");
@@ -144,14 +150,38 @@ int main(void){
 		Nokia5110_OutString("IONS");
 		Nokia5110_SetCursor(3, 4);
 		Nokia5110_OutString("YOU WON");
+		Delay100ms(30);
+                Nokia5110_Clear();
+                Nokia5110_SetCursor(1, 2);
+                Nokia5110_OutString("1-TRY AGAIN");
+                Nokia5110_SetCursor(1, 3);
+                Nokia5110_OutString("2-EXIT");
 	}
 	else{
+	  	TIMER2_IMR_R = 0x00000000;
 		Nokia5110_Clear();
 		Nokia5110_SetCursor(1, 1);
 		Nokia5110_OutString("GAME OVER");
 		Nokia5110_SetCursor(1, 2);
 		Nokia5110_OutString("Nice try!");
+		Nokia5110_SetCursor(1, 4);
+                Nokia5110_OutString("1-TRY AGAIN");
+                Nokia5110_SetCursor(1, 5);
+                Nokia5110_OutString("2-EXIT");
 	}
+	while(1){
+                SW1 = GPIO_readPin(PORTF_ID, PIN4_ID);
+                SW2 = GPIO_readPin(PORTF_ID, PIN0_ID);
+                if(!SW1){
+                        Delay100ms(10);
+                        TIMER2_IMR_R = 0x00000001;
+                        goto again;
+                }
+                if(!SW2){
+                        break;
+                }
+        }
+        Nokia5110_Clear();
 	UART_OutString("Bye ");
 }
 
@@ -182,7 +212,7 @@ void DX_Ball(){
 								nexist -= 1;
 						}
 						// if the ball hit block from right
-						else if((ballXPOS + 1 == xpositions[j] + WALLW) && ((ypositions[i] <= ballYPOS && ypositions[i] >= ballYPOS - BALLH) || ((ypositions[i] - 1 <= ballYPOS && ypositions[i] - 1 >= ballYPOS - BALLH)) ) ){
+						else if((ballXPOS  == xpositions[j] + WALLW) && ((ypositions[i] <= ballYPOS && ypositions[i] >= ballYPOS - BALLH) || ((ypositions[i] - 1 <= ballYPOS && ypositions[i] - 1 >= ballYPOS - BALLH)) ) ){
 								exist[i][j] = 0;
 								l_r = 1;
 								nexist -= 1;
